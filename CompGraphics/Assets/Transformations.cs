@@ -69,7 +69,6 @@ public class Transformations : MonoBehaviour {
         PrintVertsToFile(imageAfterTranslation, "\nImage after Translation");
 
         // Reverse above order for Super Matrix
-
         Matrix4x4 superMatrix = translationMatrix * scalingMatrix * rotationMatrix;
 
         Vector3[] imageAfterSuperMatrix = MatrixTransform(cube, superMatrix);
@@ -77,13 +76,35 @@ public class Transformations : MonoBehaviour {
         PrintMatrixToFile(superMatrix, "\nSuper Matrix");
         PrintVertsToFile(imageAfterSuperMatrix, "\nImage after Super Matrix");
 
-        Vector3 pos = -new Vector3(1, 8, 1);
+        // Viewing Matrix
+        Vector3 pos = -new Vector3(10, 4, 51);
         Vector3 direction = (new Vector3(1, 8, 1) - new Vector3(10, 4, 51));
         Vector3 cameraUp = new Vector3(2, 1, 8);
         Quaternion rot = Quaternion.LookRotation(direction.normalized,cameraUp.normalized);
-        //Matrix4x4 CameraMatrix = Matrix4x4(-POS,rot,Vector3.one);
+        Matrix4x4 viewingMatrix = Matrix4x4.TRS(pos,rot,Vector3.one);
 
-        Matrix4x4.Perspective(45, 1.2f, 1, 1000);
+        Vector3[] imageAfterViewing =
+            MatrixTransform(imageAfterTranslation, viewingMatrix);
+
+        // Save to file
+        PrintMatrixToFile(viewingMatrix, "\nViewing Matrix");
+        PrintVertsToFile(imageAfterViewing, "\nImage after Viewing Matrix");
+
+        Matrix4x4 perspectiveMatrix = Matrix4x4.Perspective(45, 1.2f, 1, 1000);
+
+        Vector3[] imageAfterPerspective =
+            MatrixTransform(imageAfterViewing, perspectiveMatrix);
+
+        // Save to file
+        PrintMatrixToFile(perspectiveMatrix, "\nPespective Matrix");
+        PrintVertsToFile(imageAfterPerspective, "\nImage after Perspective Matrix");
+
+        Matrix4x4 megaMatrix = perspectiveMatrix * viewingMatrix * superMatrix;
+
+        Vector3[] imageAfterMegaMatrix = MatrixTransform(cube, megaMatrix);
+
+        PrintMatrixToFile(megaMatrix, "\nMega Matrix");
+        PrintVertsToFile(imageAfterMegaMatrix, "\nImage after Mega Matrix");
 
     }
 
