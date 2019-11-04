@@ -95,5 +95,76 @@ namespace Assets
 
             }
         }
+
+        public static List<Vector2Int> Breshenhams(Vector2Int v, Vector2Int u)
+        {
+            int diffX = (int)(u.x - v.x);
+            if (diffX < 0) return Breshenhams(u, v);
+
+            int diffY = (int)(u.y - v.y);
+            if (diffY < 0) negateY(Breshenhams(negateY(v), negateY(u)));
+
+            if (diffY > diffX) swapXY(Breshenhams(swapXY(v), swapXY(u)));
+
+            int twoDY = diffY * 2;
+            int TwoDY2DX = twoDY - (diffX * 2);
+            int p = twoDY - diffY;
+            List<Vector2Int> points = new List<Vector2Int>();
+            points.Add(v);
+
+
+
+            for (int i = (int)v.x; i < u.x; i++)
+            {
+
+                if (p > 0)
+                {
+                    v.x++;
+                    v.y++;
+                    p += TwoDY2DX;
+                }
+                else
+                {
+                    v.x++;
+                    p += twoDY;
+                }
+
+                points.Add(v);
+            }
+
+            return points;
+        }
+        private static Vector2Int swapXY(Vector2Int v)
+        {
+            return new Vector2Int(v.y, v.x);
+        }
+
+        private static List<Vector2Int> swapXY(List<Vector2Int> list)
+        {
+            List<Vector2Int> output_list = new List<Vector2Int>();
+
+            foreach (Vector2Int v in list)
+                output_list.Add(swapXY(v));
+
+
+            return output_list;
+        }
+
+
+        private static List<Vector2Int> negateY(List<Vector2Int> list)
+        {
+            List<Vector2Int> output_list = new List<Vector2Int>();
+
+            foreach (Vector2Int v in list)
+                output_list.Add(negateY(v));
+
+
+            return output_list;
+        }
+
+        private static Vector2Int negateY(Vector2Int v)
+        {
+            return new Vector2Int(v.x, -v.y);
+        }
     }
 }
