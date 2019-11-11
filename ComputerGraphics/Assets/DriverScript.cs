@@ -11,14 +11,16 @@ public class DriverScript : MonoBehaviour
 
     Vector3[] cube;
 
-    
+    Renderer ourRenderer;
     Matrix4x4 megaMatrix;
     int screenwidth;
     int screenHeight;
+    Texture2D ourScreen;
 
     // Start is called before the first frame update
     void Start()
     {
+        ourRenderer = GetComponent<Renderer>();
         
         cube = new Vector3[8];
 
@@ -164,52 +166,64 @@ public class DriverScript : MonoBehaviour
     void Update()
     {
 
+        Destroy(ourScreen);
+
+        ourScreen = new Texture2D(screenwidth, screenHeight);
+        ourRenderer.material.mainTexture = ourScreen;
+
         Vector2[] image = divideByZ();
 
         if (LineClip.lineClip(ref image[0],ref image[1]))
         {
-            LineClip.Breshenhams(convertToScreen(image[0]), convertToScreen(image[1]));
+           Draw(LineClip.Breshenhams(convertToScreen(image[0]), convertToScreen(image[1])));
         }
         if (LineClip.lineClip(ref image[0], ref image[4]))
         {
-            LineClip.Breshenhams(convertToScreen(image[0]), convertToScreen(image[1]));
+            Draw(LineClip.Breshenhams(convertToScreen(image[0]), convertToScreen(image[4])));
         }
-
         if (LineClip.lineClip(ref image[1], ref image[2]))
         {
-            LineClip.Breshenhams(convertToScreen(image[0]), convertToScreen(image[1]));
+            Draw(LineClip.Breshenhams(convertToScreen(image[1]), convertToScreen(image[2])));
         }
         if (LineClip.lineClip(ref image[1], ref image[5]))
         {
-            LineClip.Breshenhams(convertToScreen(image[0]), convertToScreen(image[1]));
+            Draw(LineClip.Breshenhams(convertToScreen(image[1]), convertToScreen(image[5])));
         }
         if (LineClip.lineClip(ref image[5], ref image[4]))
         {
-            LineClip.Breshenhams(convertToScreen(image[0]), convertToScreen(image[1]));
+            Draw(LineClip.Breshenhams(convertToScreen(image[5]), convertToScreen(image[4])));
         }
         if (LineClip.lineClip(ref image[5], ref image[6]))
         {
-            LineClip.Breshenhams(convertToScreen(image[0]), convertToScreen(image[1]));
+            Draw(LineClip.Breshenhams(convertToScreen(image[5]), convertToScreen(image[6])));
         }
         if (LineClip.lineClip(ref image[2], ref image[6]))
         {
-            LineClip.Breshenhams(convertToScreen(image[0]), convertToScreen(image[1]));
+            Draw(LineClip.Breshenhams(convertToScreen(image[2]), convertToScreen(image[6])));
         }
         if (LineClip.lineClip(ref image[2], ref image[3]))
         {
-            LineClip.Breshenhams(convertToScreen(image[0]), convertToScreen(image[1]));
+            Draw(LineClip.Breshenhams(convertToScreen(image[2]), convertToScreen(image[3])));
         }
         if (LineClip.lineClip(ref image[7], ref image[4]))
         {
-            LineClip.Breshenhams(convertToScreen(image[0]), convertToScreen(image[1]));
+            Draw(LineClip.Breshenhams(convertToScreen(image[7]), convertToScreen(image[4])));
         }
         if (LineClip.lineClip(ref image[7], ref image[3]))
         {
-            LineClip.Breshenhams(convertToScreen(image[0]), convertToScreen(image[1]));
+            Draw(LineClip.Breshenhams(convertToScreen(image[7]), convertToScreen(image[3])));
         }
         if (LineClip.lineClip(ref image[2], ref image[3]))
         {
-            LineClip.Breshenhams(convertToScreen(image[0]), convertToScreen(image[1]));
+            Draw(LineClip.Breshenhams(convertToScreen(image[2]), convertToScreen(image[3])));
         }
+
+        ourScreen.Apply(); 
+    }
+
+    private void Draw(List<Vector2Int> list)
+    {
+        foreach (Vector2Int v in list)
+            ourScreen.SetPixel(v.x, v.y, Color.green);
     }
 }
