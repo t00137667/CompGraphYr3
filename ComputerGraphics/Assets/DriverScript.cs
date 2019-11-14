@@ -16,6 +16,8 @@ public class DriverScript : MonoBehaviour
     int screenwidth;
     int screenHeight;
     Texture2D ourScreen;
+    private float angle;
+    private int movement;
 
     // Start is called before the first frame update
     void Start()
@@ -69,41 +71,34 @@ public class DriverScript : MonoBehaviour
         //}
     }
 
-    private Matrix4x4 getRotationMatrix()
+    private Matrix4x4 getRotationMatrix(float angle, Vector3 axis)
     {
-        Vector3 startingAxis = new Vector3(8, 1, 1);
-        startingAxis.Normalize();
-        Quaternion rotation = Quaternion.AngleAxis(17, startingAxis);
+
+        Quaternion rotation = Quaternion.AngleAxis(angle, axis.normalized);
         return Matrix4x4.TRS(new Vector3(0, 0, 0),rotation, Vector3.one);
     }
     private Matrix4x4 getScalingMatrix()
     {
         return Matrix4x4.TRS(new Vector3(0, 0, 0), Quaternion.identity, new Vector3(8, 3, 1));
     }
-    private Matrix4x4 getTranslationMatrix()
+    private Matrix4x4 getTranslationMatrix(Vector3 v)
     {
-        return Matrix4x4.TRS(new Vector3(2, 1, 2), Quaternion.identity, Vector3.one);
+        return Matrix4x4.TRS(v, Quaternion.identity, Vector3.one);
     }
-    private Matrix4x4 getViewingMatrix()
+    private Matrix4x4 getViewingMatrix(Vector3 pos,Vector3 target, Vector3 up)
     {
-        Vector3 pos = -new Vector3(10, 4, 51);
-        Vector3 direction = (new Vector3(1, 8, 1) - new Vector3(10, 4, 51));
-        Vector3 cameraUp = new Vector3(2, 1, 8);
-        Quaternion rot = Quaternion.LookRotation(direction.normalized, cameraUp.normalized);
-        return Matrix4x4.TRS(pos, rot, Vector3.one);
+      
+        Vector3 direction = target - pos;
+   
+        Quaternion rot = Quaternion.LookRotation(direction.normalized, up.normalized);
+        return Matrix4x4.TRS(-pos, rot, Vector3.one);
     }
     private Matrix4x4 getPerspectiveMatrix()
     {
         return  Matrix4x4.Perspective(45, 1.2f, 1, 1000);
     }
-    private Matrix4x4 getSuperMatrix()
-    {
-        return getTranslationMatrix() * getScalingMatrix() * getRotationMatrix();
-    }
-    private Matrix4x4 getMegaMatrix()
-    {
-        return megaMatrix = getPerspectiveMatrix() * getViewingMatrix() * getSuperMatrix();
-    }
+
+
     private Vector3[] MatrixTransform(Vector3[] meshVertices, Matrix4x4 transformMatrix)
     {
         Vector3[] output = new Vector3[meshVertices.Length];
@@ -118,9 +113,9 @@ public class DriverScript : MonoBehaviour
         return output;
     }
 
-    private Vector2[] divideByZ()
+    private Vector2[] divideByZ(Vector3[] image)
     {
-        Vector3[] image = getImageTransform();
+     
         List<Vector2> output = new List<Vector2>();
         foreach (Vector3 v in image)
         {
@@ -128,102 +123,94 @@ public class DriverScript : MonoBehaviour
         }
         return output.ToArray();
     }
-    private Vector3[] getImageTransform()
-    {
-        return MatrixTransform(cube, getMegaMatrix());
-    }
+
     private Vector2Int convertToScreen(Vector2 v)
     {
-        int x = (int)Math.Round((v.x + 1 / 2) * (screenwidth - 1));
-        int y = (int)Math.Round((1 + v.y / 2) * (screenHeight - 1));
+        int x = (int)Math.Round((v.x + 1.0f) * (screenwidth - 1.0f) / 2.0f );
+        int y = (int)Math.Round((1.0f - v.y) * (screenHeight - 1.0f) / 2.0f );
         return new Vector2Int(x, y);
     }
-    private Vector2Int[] screenImage()
-    {
-        Vector2[] input = divideByZ();
-        List<Vector2Int> output = new List<Vector2Int>();
-        foreach (Vector2 v in input)
-        {
-            output.Add(convertToScreen(v));
-        }
-        return output.ToArray();
+    //private Vector2Int[] screenImage()
+    //{
+    //    Vector2[] input = divideByZ();
+    //    List<Vector2Int> output = new List<Vector2Int>();
+    //    foreach (Vector2 v in input)
+    //    {
+    //        output.Add(convertToScreen(v));
+    //    }
+    //    return output.ToArray();
 
-    }
+    //}
 
-    private Vector2[] clippedImage()
-    {
-        Vector2[] input = divideByZ();
-        List<Vector2Int> output = new List<Vector2Int>();
+    //private Vector2[] clippedImage()
+    //{
+    //    Vector2[] input = divideByZ();
+    //    List<Vector2Int> output = new List<Vector2Int>();
 
-        LineClip.lineClip(ref input[0],ref input[1]);
-        LineClip.lineClip(ref input[0], ref input[1]);
+    //    LineClip.lineClip(ref input[0],ref input[1]);
+    //    LineClip.lineClip(ref input[0], ref input[1]);
         
 
-        return input;
-    }
+    //    return input;
+    //}
 
     // Update is called once per frame
     void Update()
     {
-
+        angle++;        
         Destroy(ourScreen);
 
         ourScreen = new Texture2D(screenwidth, screenHeight);
         ourRenderer.material.mainTexture = ourScreen;
 
-        Vector2[] image = divideByZ();
+        Matrix4x4 world = getTranslationMatrix(new Vector3(0, 0, 0)) * getRotationMatrix(angle, new Vector3(1,1,1)) ;
+        Matrix4x4 view = getViewingMatrix(new Vector3(0, 0, 20), new Vector3(1, 0, 0), Vector3.up);
+        Vector3[] imageafterProjection = MatrixTransform(cube, getPerspectiveMatrix() * view * world);
 
-        if (LineClip.lineClip(ref image[0],ref image[1]))
-        {
-           Draw(LineClip.Breshenhams(convertToScreen(image[0]), convertToScreen(image[1])));
-        }
-        if (LineClip.lineClip(ref image[0], ref image[4]))
-        {
-            Draw(LineClip.Breshenhams(convertToScreen(image[0]), convertToScreen(image[4])));
-        }
-        if (LineClip.lineClip(ref image[1], ref image[2]))
-        {
-            Draw(LineClip.Breshenhams(convertToScreen(image[1]), convertToScreen(image[2])));
-        }
-        if (LineClip.lineClip(ref image[1], ref image[5]))
-        {
-            Draw(LineClip.Breshenhams(convertToScreen(image[1]), convertToScreen(image[5])));
-        }
-        if (LineClip.lineClip(ref image[5], ref image[4]))
-        {
-            Draw(LineClip.Breshenhams(convertToScreen(image[5]), convertToScreen(image[4])));
-        }
-        if (LineClip.lineClip(ref image[5], ref image[6]))
-        {
-            Draw(LineClip.Breshenhams(convertToScreen(image[5]), convertToScreen(image[6])));
-        }
-        if (LineClip.lineClip(ref image[2], ref image[6]))
-        {
-            Draw(LineClip.Breshenhams(convertToScreen(image[2]), convertToScreen(image[6])));
-        }
-        if (LineClip.lineClip(ref image[2], ref image[3]))
-        {
-            Draw(LineClip.Breshenhams(convertToScreen(image[2]), convertToScreen(image[3])));
-        }
-        if (LineClip.lineClip(ref image[7], ref image[4]))
-        {
-            Draw(LineClip.Breshenhams(convertToScreen(image[7]), convertToScreen(image[4])));
-        }
-        if (LineClip.lineClip(ref image[7], ref image[3]))
-        {
-            Draw(LineClip.Breshenhams(convertToScreen(image[7]), convertToScreen(image[3])));
-        }
-        if (LineClip.lineClip(ref image[2], ref image[3]))
-        {
-            Draw(LineClip.Breshenhams(convertToScreen(image[2]), convertToScreen(image[3])));
-        }
+        Vector2[] image = divideByZ(imageafterProjection);
+
+        Draw(image);
+
 
         ourScreen.Apply(); 
+    }
+
+    private void Draw(Vector2[] image)
+
+
+    {
+        drawLine(image[0], image[1]);
+        drawLine(image[1], image[2]);
+        drawLine(image[2], image[3]);
+        drawLine(image[3], image[0]);
+        drawLine(image[4], image[5]);
+        drawLine(image[5], image[6]);
+        drawLine(image[6], image[7]);
+        drawLine(image[7], image[4]);
+        drawLine(image[0], image[4]);
+        drawLine(image[1], image[5]);
+        drawLine(image[2], image[6]);
+        drawLine(image[3], image[7]);
+
+
+
+
+    }
+
+    private void drawLine(Vector2 Start, Vector2 Finish)
+    {
+        Vector2 start = Start, finish = Finish;
+
+        if (LineClip.lineClip(ref start, ref finish))
+        {
+            Draw(LineClip.Breshenhams(convertToScreen(start), convertToScreen(finish)));
+        }
+
     }
 
     private void Draw(List<Vector2Int> list)
     {
         foreach (Vector2Int v in list)
-            ourScreen.SetPixel(v.x, v.y, Color.green);
+            ourScreen.SetPixel(v.x, v.y, Color.blue);
     }
 }

@@ -102,34 +102,33 @@ namespace Assets
             if (diffX < 0) return Breshenhams(u, v);
 
             int diffY = (int)(u.y - v.y);
-            if (diffY < 0) negateY(Breshenhams(negateY(v), negateY(u)));
+            if (diffY < 0) return negateY(Breshenhams(negateY(v), negateY(u)));
 
-            if (diffY > diffX) swapXY(Breshenhams(swapXY(v), swapXY(u)));
+            if (diffY > diffX) return swapXY(Breshenhams(swapXY(v), swapXY(u)));
 
             int twoDY = diffY * 2;
             int TwoDY2DX = twoDY - (diffX * 2);
-            int p = twoDY - diffY;
+            int p = twoDY - diffX;
             List<Vector2Int> points = new List<Vector2Int>();
-            points.Add(v);
+     
+            int y = v.y;
 
-
-
-            for (int i = (int)v.x; i < u.x; i++)
+            for (int x = (int)v.x; x <= u.x; x++)
             {
 
                 if (p > 0)
                 {
-                    v.x++;
-                    v.y++;
+
+                    y++;
                     p += TwoDY2DX;
                 }
                 else
                 {
-                    v.x++;
+             
                     p += twoDY;
                 }
 
-                points.Add(v);
+                points.Add(new Vector2Int(x,y));
             }
 
             return points;
