@@ -11,6 +11,8 @@ public class DriverScript : MonoBehaviour
 
     Vector3[] cube;
 
+    int wall = -1;
+
     Renderer ourRenderer;
     Matrix4x4 megaMatrix;
     int screenwidth;
@@ -162,14 +164,19 @@ public class DriverScript : MonoBehaviour
 
         ourScreen = new Texture2D(screenwidth, screenHeight);
         ourRenderer.material.mainTexture = ourScreen;
+        Color targetColor = ourScreen.GetPixel(1, 1);
 
-        Matrix4x4 world = getTranslationMatrix(new Vector3(0, 0, 0)) * getRotationMatrix(angle, new Vector3(1,1,1)) ;
+        Matrix4x4 world =  getRotationMatrix(angle, new Vector3(1,1,1))* getTranslationMatrix(new Vector3(8, 0, 2))  ;
         Matrix4x4 view = getViewingMatrix(new Vector3(0, 0, 20), new Vector3(1, 0, 0), Vector3.up);
+      
         Vector3[] imageafterProjection = MatrixTransform(cube, getPerspectiveMatrix() * view * world);
 
         Vector2[] image = divideByZ(imageafterProjection);
 
         Draw(image);
+        Vector2Int pixelPoint = convertToScreen(image[2]);
+        int pos_x = pixelPoint.x, pos_y = pixelPoint.y;
+        Fill(pos_x, pos_y, targetColor, Color.black);
 
 
         ourScreen.Apply(); 
@@ -212,5 +219,29 @@ public class DriverScript : MonoBehaviour
     {
         foreach (Vector2Int v in list)
             ourScreen.SetPixel(v.x, v.y, Color.blue);
+    }
+
+    bool onScreen(int x, int y)
+    {
+        return (x >= 0) && (y >= 0) && (x < screenwidth) && (y < screenHeight);
+    }
+    private void Fill(int pos_x, int pos_y, Color target_color, Color color)
+    {
+        
+
+        if (!onScreen(pos_x,pos_y) || ourScreen.GetPixel(pos_x, pos_y) == color) // if there is no wall or if i haven't been there
+            return;                                              // already go back
+
+        if (ourScreen.GetPixel(pos_x, pos_y) != target_color) // if it's not color go back
+            return;
+
+        ourScreen.SetPixel(pos_x, pos_y, color); // mark the point so that I know if I passed through it. 
+
+        Fill(pos_x + 1, pos_y, target_color, color);  // then i can either go south
+        Fill(pos_x - 1, pos_y, target_color, color);  // or north
+        Fill(pos_x, pos_y + 1, target_color, color);  // or east
+        Fill(pos_x, pos_y - 1, target_color, color);  // or west
+
+        return;
     }
 }

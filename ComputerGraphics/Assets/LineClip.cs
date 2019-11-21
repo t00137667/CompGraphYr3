@@ -16,10 +16,10 @@ namespace Assets
             Outcode inViewPort = new Outcode();
 
             if ((outcodeV + outcodeU) == inViewPort) return true;
-            if ((outcodeV * outcodeU) == inViewPort) return false;
+            if ((outcodeV * outcodeU) != inViewPort) return false;
 
             if (outcodeV == inViewPort)
-                lineClip(ref u, ref v);
+                return lineClip(ref u, ref v);
 
 
 
@@ -31,7 +31,7 @@ namespace Assets
                 if (newVOutcode == inViewPort)
                 {
                     v = newV;
-                    return lineClip(ref v, ref u);
+                    return lineClip(ref u, ref v);
                 }
             }
 
@@ -43,7 +43,7 @@ namespace Assets
                 if (newVOutcode == inViewPort)
                 {
                     v = newV;
-                    return lineClip(ref v, ref u);
+                    return lineClip(ref u, ref v);
                 }
             }
 
@@ -55,7 +55,7 @@ namespace Assets
                 if (newVOutcode == inViewPort)
                 {
                     v = newV;
-                    return lineClip(ref v, ref u);
+                    return lineClip(ref u, ref v);
                 }
             }
 
@@ -67,7 +67,7 @@ namespace Assets
                 if (newVOutcode == inViewPort)
                 {
                     v = newV;
-                    return lineClip(ref v, ref u);
+                    return lineClip(ref u, ref v);
                 }
             }
 
