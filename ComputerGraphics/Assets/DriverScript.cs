@@ -20,6 +20,7 @@ public class DriverScript : MonoBehaviour
     Texture2D ourScreen;
     private float angle;
     private int movement;
+    Color targetColor;
 
     // Start is called before the first frame update
     void Start()
@@ -37,7 +38,7 @@ public class DriverScript : MonoBehaviour
         cube[6] = new Vector3(-1, -1, -1);
         cube[7] = new Vector3(1, -1, -1);
 
-
+        
 
         //Outcode outcodeA = new Outcode(pointA);
         //Outcode outcodeB = new Outcode(pointB);
@@ -159,12 +160,14 @@ public class DriverScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        angle++;        
+        angle++;
+        //print(angle);
         Destroy(ourScreen);
 
         ourScreen = new Texture2D(screenwidth, screenHeight);
         ourRenderer.material.mainTexture = ourScreen;
-        Color targetColor = ourScreen.GetPixel(1, 1);
+        
+        targetColor = ourScreen.GetPixel(1, 1);
 
         Matrix4x4 world =  getRotationMatrix(angle, new Vector3(1,1,1))* getTranslationMatrix(new Vector3(8, 0, 2))  ;
         Matrix4x4 view = getViewingMatrix(new Vector3(0, 0, 20), new Vector3(1, 0, 0), Vector3.up);
@@ -173,10 +176,11 @@ public class DriverScript : MonoBehaviour
 
         Vector2[] image = divideByZ(imageafterProjection);
 
-        Draw(image);
+        //Draw(image);
+        DrawPoly(image);
         Vector2Int pixelPoint = convertToScreen(image[2]);
         int pos_x = pixelPoint.x, pos_y = pixelPoint.y;
-        Fill(pos_x, pos_y, targetColor, Color.black);
+        //Fill(pos_x, pos_y, targetColor, Color.black);
 
 
         ourScreen.Apply(); 
@@ -202,6 +206,59 @@ public class DriverScript : MonoBehaviour
 
 
 
+    }
+
+    private void DrawPoly(Vector2[] image)
+    {
+        Vector2[] polyTop = { image[5], image[1], image[0], image[4], image[5] };
+        Vector2[] polyFront = { image[1], image[2], image[3], image[0], image[1] };
+        Vector2[] polyLeft = { image[0], image[3], image[7], image[4], image[0] };
+        Vector2[] polyBack = { image[4], image[7], image[6], image[5], image[4] };
+        Vector2[] polyRight = { image[5], image[6], image[2], image[1], image[5] };
+        Vector2[] polyBottom = { image[2], image[6], image[7], image[3], image[2] };
+
+        List<Vector2[]> polygons = new List<Vector2[]>();
+        polygons.Add(polyTop);
+        polygons.Add(polyFront);
+        polygons.Add(polyLeft);
+        polygons.Add(polyBack);
+        polygons.Add(polyRight);
+        polygons.Add(polyBottom);
+
+        foreach (Vector2[] v in polygons)
+        {
+            if (isFront(v[0], v[1], v[2]))
+            {
+                drawLine(v[0], v[1]);
+                drawLine(v[1], v[2]);
+                drawLine(v[2], v[3]);
+                drawLine(v[3], v[4]);
+            }
+
+            Vector2Int fill = fillPoint(v[0], v[1],v[2]);
+            Fill(fill.x, fill.y, Color.white, Color.cyan);
+        }
+
+    }
+
+    private bool isFront(Vector2 v, Vector2 u, Vector2 w)
+    {
+        Vector2 v1 = u - v;
+        Vector2 u1 = w - u;
+        double cross = (v1.x * u1.y) - (v1.y * u1.x);
+        return cross > 0 ? true : false;
+    }
+
+    private Vector2Int fillPoint(Vector2 v, Vector2 u, Vector2 w)
+    {
+        float x = 0f;
+        float y = 0f;
+        float z = 0f;
+        
+        x = v.x + u.x + w.x;
+        y += v.y + u.y + w.y;
+
+        return convertToScreen(new Vector2(x / 3, y / 3));
     }
 
     private void drawLine(Vector2 Start, Vector2 Finish)
@@ -243,5 +300,10 @@ public class DriverScript : MonoBehaviour
         Fill(pos_x, pos_y - 1, target_color, color);  // or west
 
         return;
+    }
+
+    private void FillCube()
+    {
+
     }
 }
