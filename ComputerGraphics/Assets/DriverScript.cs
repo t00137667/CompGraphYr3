@@ -22,6 +22,7 @@ public class DriverScript : MonoBehaviour
     private int movement;
     Color targetColor;
     List<Edge> edgeTable;
+    List<Edge> activeEdge;
 
     // Start is called before the first frame update
     void Start()
@@ -55,7 +56,7 @@ public class DriverScript : MonoBehaviour
         targetColor = ourScreen.GetPixel(1, 1);
 
         edgeTable = new List<Edge>();
-
+        activeEdge = new List<Edge>();
         //outcodeA.printOutcode();
         //outcodeB.printOutcode();
 
@@ -141,7 +142,7 @@ public class DriverScript : MonoBehaviour
         int y = (int)Math.Round((1.0f - v.y) * (screenHeight - 1.0f) / 2.0f);
         return new Vector2Int(x, y);
     }
-    //private Vector2Int[] screenImage()
+    //private Vector2Int[] screenImage(Vector2[] image)
     //{
     //    Vector2[] input = divideByZ();
     //    List<Vector2Int> output = new List<Vector2Int>();
@@ -187,6 +188,7 @@ public class DriverScript : MonoBehaviour
 
         //Draw(image);
         DrawPoly(image);
+        
         //Vector2Int pixelPoint = convertToScreen(image[2]);
         //int pos_x = pixelPoint.x, pos_y = pixelPoint.y;
         //Fill(pos_x, pos_y, targetColor, Color.black);
@@ -249,11 +251,12 @@ public class DriverScript : MonoBehaviour
             {
                 Vector2Int fill = fillPoint(v[0], v[1], v[2]);
                 if (!onScreen(fill)) print("Fillpoint Offscreen");
-                Fill(fill.x, fill.y, Color.blue, Color.cyan);
+                //Fill(fill.x, fill.y, Color.blue, Color.cyan);
+                
             }
-
+            
         }
-
+        ScanLine(polygons);
     }
 
     private bool isFront(Vector2 v, Vector2 u, Vector2 w)
@@ -332,8 +335,17 @@ public class DriverScript : MonoBehaviour
         Vector3 diff = new Vector3(one.r - two.r, one.g - two.g, one.b - two.b);
         return diff.magnitude < 0.3f;
     }
-    private void FillCube()
+    private void ScanLine(List<Vector2[]> polygons)
     {
+        
+        foreach (Vector2[] poly in polygons)
+        {
+            CreateEdges(poly);
+        }
+
+        //print(edgeTable[0].yMin.ToString());
+        processEdgeTable();
+
 
     }
 
@@ -346,13 +358,13 @@ public class DriverScript : MonoBehaviour
 
             if (polygon[i].x < polygon[i + 1].x)
             {
-                firstPoint = polygon[i];
-                secondPoint = polygon[i + 1];
+                firstPoint = convertToScreen(polygon[i]);
+                secondPoint = convertToScreen(polygon[i + 1]);
             }
             else
             {
-                firstPoint = polygon[i + 1];
-                secondPoint = polygon[i];
+                firstPoint = convertToScreen(polygon[i + 1]);
+                secondPoint = convertToScreen(polygon[i]);
             }
 
             int dX = (int)(secondPoint.x - firstPoint.x);
@@ -371,8 +383,7 @@ public class DriverScript : MonoBehaviour
             }
 
         }
-
-
+        
     }
 
 //    Create ET
@@ -391,33 +402,81 @@ public class DriverScript : MonoBehaviour
 //        6. Increment all the X's in the AL edges based on their slope
 //            1. If the edge's slope is vertical, the bucket's x member is NOT incremented.
 
-    private void processEdgeTable(List<Edge> edgeTable)
+    private void processEdgeTable()
     {
-        List<Edge> activeEdge = new List<Edge>();
+        int currentScanLine = 0;
+        int scanMax = screenHeight;
+        int scanMin = 0;
+        print("Entered process");
+
+        foreach (Edge e in edgeTable)
+        {
+            if (scanMax > e.yMax) scanMax = e.yMax;
+            if (scanMin < e.yMin) scanMin = e.yMin;
+        }
+
         while (edgeTable.Count != 0)
         {
             if (activeEdge.Count != 0)
             {
                 foreach (Edge e in activeEdge)
                 {
-                    if (e.yMax == currentScanline)
+                    if (e.yMax == currentScanLine)
                     {
                         edgeTable.Remove(e);
                         activeEdge.Remove(e);
                     }
                 }                
             }
-            for ()
+            // Add edge from edge table to active list if y == ymin
+            foreach (Edge e in  edgeTable)
+            {
+                if (e.yMin == currentScanLine)
+                {
+                    activeEdge.Add(e);
+                }
+            }
+            sortActiveList();
+            //Fill the polygon pixel
+            for (int i = 0; i < activeEdge.Count; i++)
+            {
+                for (int j = activeEdge[i].x; i < activeEdge[i+1].x;i++)
+                {
+
+                }
+            }
+            foreach (Edge e in activeEdge)
             {
 
             }
-            for ()
-            {
 
-            }
+            edgeTable.Clear();
+            activeEdge.Clear();
         }
     }
-
+    private void sortActiveList()
+    {
+        List<Edge> sortedEdges = new List<Edge>(activeEdge.Count);
+        Edge workingEdge;
+        int index = 0;
+        foreach (Edge e in activeEdge)
+        {
+            index = 0;
+            workingEdge = e;
+            while (index < activeEdge.Count)
+            {
+                if (workingEdge < activeEdge[index])
+                {
+                    sortedEdges.Insert(index, workingEdge);
+                    return;
+                }
+                index++;
+            }
+            
+            
+        }
+        activeEdge = sortedEdges;
+    }
 
 private class Edge
     {
@@ -444,5 +503,122 @@ private class Edge
             this.dX = dX;
             this.dY = dY;
         }
+        public static bool operator <(Edge a, Edge b)//Overloaded relationship
+        {
+            return (Math.Abs(a.x - b.x) < 1 ? 1/(a.dY/a.dX) < 1/(b.dY/b.dX) : a.x < b.x);
+        }
+        public static bool operator >(Edge a, Edge b)//Overloaded relationship
+        {
+            return (Math.Abs(a.x - b.x) < 1 ? 1/(a.dY / a.dX) > 1/(b.dY / b.dX) : a.x > b.x);
+        }
+        public static bool operator ==(Edge a, Edge b)//Overload equal to
+        {
+            return (Math.Abs(a.x - b.x) < 1 && 1/(a.dY / a.dX) == 1/(b.dY / b.dX) && a.yMax == b.yMax);
+        }
+        public static bool operator !=(Edge a, Edge b)//Overload not equal to
+        {
+            return (Math.Abs(a.x - b.x) > 1 || 1/(a.dY / a.dX) != 1/(b.dY / b.dX) || a.yMax != b.yMax);
+        }
+
     }
-}
+    //public class Edge
+    //{
+    //    public double xi;//The x-coordinate of the lower end of the edge, in the activation linked list (AET), represents the x coordinate of the intersection of the scan line and the edge
+    //    public double dx;//Is a constant (reciprocal of the slope of the line) (x + dx, y + 1)
+    //    public int ymax;//The y value of the upper vertex of the edge
+        //public static bool operator <(Edge a, Edge b)//Overloaded relationship
+        //{
+        //    return (Math.Abs(a.xi - b.xi)<1 ? a.dx<b.dx : a.xi<b.xi);
+        //}
+        //public static bool operator >(Edge a, Edge b)//Overloaded relationship
+        //{
+        //    return (Math.Abs(a.xi - b.xi) < 1 ? a.dx > b.dx : a.xi > b.xi);
+        //}
+        //public static bool operator ==(Edge a, Edge b)//Overload equal to
+        //{
+        //    return (Math.Abs(a.xi - b.xi)<1  && a.dx == b.dx && a.ymax == b.ymax);
+        //}
+        //public static bool operator !=(Edge a, Edge b)//Overload not equal to
+        //{
+        //    return (Math.Abs(a.xi - b.xi)>1 || a.dx != b.dx || a.ymax != b.ymax);
+        //}
+    }
+ //   public void ScanLinePolygonFill(List<Point> Q, Graphics g, int XiangSu)
+ //   {
+ //     this.XiangSu = XiangSu;
+ //     this.g = g;
+  
+ //     List<Edge>[] NET = new List<Edge>[500];//Define a new edge table
+ //     for (int i = 0; i< 500; i++) NET[i] = new List<Edge>();//Instantiation
+  
+ //     int ymax = 0, ymin = 0;//The maximum and minimum of the polygon y
+ 
+ //    GetPolygonMinMax(Q, out ymax, out ymin);//Calculate updates ymax and ymin(ok)
+ //    InitScanLineNewEdgeTable(NET, Q, ymin, ymax);//Initialize a new edge table
+ //    HorizonEdgeFill(Q); //Horizontal line fill directly
+ //    ProcessScanLineFill(NET, ymin, ymax);
+ //}
+//    private void InitScanLineNewEdgeTable(List<Edge>[] NET, List<Point> Q, int ymin, int ymax)
+// {
+//     List<int> temp = new List<int>();
+//     Edge e;
+//     for (int i = 0; i<Q.Count; i++)
+//     {
+//         Point ps = Q[i];
+//         Point pe = Q[(i + 1) % Q.Count];
+//         Point pss = Q[(i - 1 + Q.Count) % Q.Count];
+//         Point pee = Q[(i + 2) % Q.Count];
+//         if (pe.Y != ps.Y)//Do not process parallel lines
+//         {
+//             e = new Edge();
+//             e.dx = (double) (pe.X - ps.X) / (double) (pe.Y - ps.Y) * XiangSu;
+//             if (pe.Y > ps.Y)
+//             {
+//                 e.xi = ps.X;
+//                 if (pee.Y >= pe.Y)
+//                     e.ymax = pe.Y - XiangSu;
+//                 else
+//                     e.ymax = pe.Y;
+//                 NET[ps.Y - ymin].Add(e);//Join the corresponding NET
+//                temp.Add(ps.Y - ymin);
+//             }
+//             else
+//             {
+//                e.xi = pe.X;
+//                 if (pss.Y >= ps.Y)
+//                     e.ymax = ps.Y - XiangSu;
+//                 else
+//                     e.ymax = ps.Y;
+//                 NET[pe.Y - ymin].Add(e);//Join the corresponding NET
+//                 temp.Add(pe.Y - ymin);
+//             }
+//         }
+//     }
+//     for (int i = 0; i<temp.Count; i++)
+//     {
+//         My_Sort(ref NET[temp[i]]);
+//     }
+// }
+//    private void ProcessScanLineFill(List<Edge>[] NET, int ymin, int ymax)
+//    {
+//        List<Edge> AET = new List<Edge>();//Scanning line
+//        for (int y = ymin; y<ymax; y+=XiangSu)
+//        {
+//            #region  Display operation information
+//            g.DrawLine(new Pen(red),new Point(10, y),new Point(20, y));
+//            g.DrawString(AET.Count.ToString(), new Font("Microsoft Yahei", 6), blue, new Point(2, y));
+//            InsertNetListToAet(NET[y - ymin], ref AET);
+//            g.DrawString(y + " -> " + NET[y - ymin].Count + " -> " + AET.Count.ToString(), new Font("Microsoft Yahei", 6), blue, new Point(25, y));
+//            for (int i = 0; i<AET.Count; i++)
+//            {
+//                g.DrawString((((int) AET[i].xi) / XiangSu* XiangSu).ToString() + " ", new Font("Microsoft Yahei", 6), blue, new Point(400 + i* 24, y));
+//            }
+//            #endregion
+//            FillAetScanLine(ref AET, y);
+//            RemoveNonActiveEdgeFromAet(ref AET, y);//Delete inactive edges
+//            UpdateAndResortAet(ref AET);//Update the xi value of each item in the active side table and reorder according to xi
+//        }
+//    }
+    
+//}
+
