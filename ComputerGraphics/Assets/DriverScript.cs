@@ -179,7 +179,7 @@ public class DriverScript : MonoBehaviour
         targetColor = ourScreen.GetPixel(1, 1);
 
 
-        Matrix4x4 world = getRotationMatrix(angle, new Vector3(1, 1, 1)); // * getTranslationMatrix(new Vector3(8, 0, 2))  ;
+        Matrix4x4 world = getRotationMatrix(angle, new Vector3(1, 1, 1)) * getTranslationMatrix(new Vector3(4, 0, 2))  ;
         Matrix4x4 view = getViewingMatrix(new Vector3(0, 0, 20), new Vector3(1, 0, 0), Vector3.up);
 
         Vector3[] imageafterProjection = MatrixTransform(cube, getPerspectiveMatrix() * view * world);
@@ -244,7 +244,7 @@ public class DriverScript : MonoBehaviour
                 drawLine(v[1], v[2]);
                 drawLine(v[2], v[3]);
                 drawLine(v[3], v[4]);
-
+                CreateEdges(v);
             }
 
             if (isFront(v[0], v[1], v[2]))
@@ -338,10 +338,10 @@ public class DriverScript : MonoBehaviour
     private void ScanLine(List<Vector2[]> polygons)
     {
         
-        foreach (Vector2[] poly in polygons)
-        {
-            CreateEdges(poly);
-        }
+        //foreach (Vector2[] poly in polygons)
+        //{
+        //    CreateEdges(poly);
+        //}
 
         //print(edgeTable[0].yMin.ToString());
         processEdgeTable();
@@ -380,6 +380,7 @@ public class DriverScript : MonoBehaviour
                 dY
                 );
                 edgeTable.Add(edge);
+                print("Edge Created");
             }
 
         }
@@ -405,53 +406,59 @@ public class DriverScript : MonoBehaviour
     private void processEdgeTable()
     {
         int currentScanLine = 0;
-        int scanMax = screenHeight;
-        int scanMin = 0;
+        int scanMax = 0;
+        int scanMin = screenHeight;
         print("Entered process");
 
         foreach (Edge e in edgeTable)
         {
-            if (scanMax > e.yMax) scanMax = e.yMax;
-            if (scanMin < e.yMin) scanMin = e.yMin;
+            if (scanMax < e.yMax) scanMax = e.yMax;
+            if (scanMin > e.yMin) scanMin = e.yMin;
         }
 
-        while (edgeTable.Count != 0)
+        for (currentScanLine = scanMin; currentScanLine < scanMax; currentScanLine++)
         {
-            if (activeEdge.Count != 0)
+
+            while (edgeTable.Count != 0)
             {
+                if (activeEdge.Count != 0)
+                {
+                    foreach (Edge e in activeEdge)
+                    {
+                        if (e.yMax == currentScanLine)
+                        {
+                            edgeTable.Remove(e);
+                            activeEdge.Remove(e);
+                        }
+                    }
+                }
+                // Add edge from edge table to active list if y == ymin
+                foreach (Edge e in edgeTable)
+                {
+                    if (e.yMin == currentScanLine)
+                    {
+                        activeEdge.Add(e);
+                    }
+                }
+                activeEdge.Sort(Edge.CompareEdges);
+                //sortActiveList();
+                //Fill the polygon pixel
+                for (int i = 1; i < activeEdge.Count; i++)
+                {
+                    //for (int j = activeEdge[i-1].x; i < activeEdge[i].x; i++)
+                    //{
+                    //    ourScreen.SetPixel(j, currentScanLine, Color.green);
+                    //    print("Line Drawn");
+                    //}
+                }
                 foreach (Edge e in activeEdge)
                 {
-                    if (e.yMax == currentScanLine)
-                    {
-                        edgeTable.Remove(e);
-                        activeEdge.Remove(e);
-                    }
-                }                
-            }
-            // Add edge from edge table to active list if y == ymin
-            foreach (Edge e in  edgeTable)
-            {
-                if (e.yMin == currentScanLine)
-                {
-                    activeEdge.Add(e);
+                    if (e.dY != 0) e.x++;
                 }
-            }
-            sortActiveList();
-            //Fill the polygon pixel
-            for (int i = 0; i < activeEdge.Count; i++)
-            {
-                for (int j = activeEdge[i].x; i < activeEdge[i+1].x;i++)
-                {
 
-                }
+                edgeTable.Clear();
+                activeEdge.Clear();
             }
-            foreach (Edge e in activeEdge)
-            {
-
-            }
-
-            edgeTable.Clear();
-            activeEdge.Clear();
         }
     }
     private void sortActiveList()
@@ -465,20 +472,22 @@ public class DriverScript : MonoBehaviour
             workingEdge = e;
             while (index < activeEdge.Count)
             {
-                if (workingEdge < activeEdge[index])
+                if (workingEdge.x < activeEdge[index].x)
                 {
                     sortedEdges.Insert(index, workingEdge);
-                    return;
+                    break;
                 }
                 index++;
             }
             
             
         }
-        activeEdge = sortedEdges;
+        activeEdge.Sort(Edge.CompareEdges);
+        //activeEdge = sortedEdges;
+        print(activeEdge.Count);
     }
 
-private class Edge
+private class Edge  : IComparable<Edge>
     {
         public int yMax;
         public int yMin;
@@ -503,22 +512,84 @@ private class Edge
             this.dX = dX;
             this.dY = dY;
         }
-        public static bool operator <(Edge a, Edge b)//Overloaded relationship
+
+        public int CompareTo(Edge compareEdge)
         {
-            return (Math.Abs(a.x - b.x) < 1 ? 1/(a.dY/a.dX) < 1/(b.dY/b.dX) : a.x < b.x);
+            if (compareEdge == null)
+                return 1;
+
+            else
+                return this.x.CompareTo(compareEdge.x);
         }
-        public static bool operator >(Edge a, Edge b)//Overloaded relationship
+
+        public static int CompareEdges(Edge x, Edge y)
         {
-            return (Math.Abs(a.x - b.x) < 1 ? 1/(a.dY / a.dX) > 1/(b.dY / b.dX) : a.x > b.x);
+            print("Comparison");
+            if (x == null)
+            {
+                if (y == null)
+                {
+                    // If x is null and y is null, they're
+                    // equal. 
+                    return 0;
+                }
+                else
+                {
+                    // If x is null and y is not null, y
+                    // is greater. 
+                    return -1;
+                }
+            }
+            else
+            {
+                // If x is not null...
+                //
+                if (y == null)
+                // ...and y is null, x is greater.
+                {
+                    return 1;
+                }
+                else
+                {
+                    // ...and y is not null, compare the 
+                    // x of the two edges.
+                    //
+                    int retval = x.x.CompareTo(y.x);
+
+                    if (retval != 0)
+                    {
+                        // If the x are not of equal length
+                        return retval;
+                    }
+                    else
+                    {
+                        // If the strings are of equal length,
+                        return 1;
+                    }
+                }
+            }
         }
-        public static bool operator ==(Edge a, Edge b)//Overload equal to
-        {
-            return (Math.Abs(a.x - b.x) < 1 && 1/(a.dY / a.dX) == 1/(b.dY / b.dX) && a.yMax == b.yMax);
-        }
-        public static bool operator !=(Edge a, Edge b)//Overload not equal to
-        {
-            return (Math.Abs(a.x - b.x) > 1 || 1/(a.dY / a.dX) != 1/(b.dY / b.dX) || a.yMax != b.yMax);
-        }
+        //public static bool operator <(Edge a, Edge b)//Overloaded relationship
+        //{
+        //    return (Math.Abs(a.x - b.x) < 1 ? 1/(a.dY/a.dX) < 1/(b.dY/b.dX) : a.x < b.x);
+        //}
+        //public static bool operator >(Edge a, Edge b)//Overloaded relationship
+        //{
+        //    return (Math.Abs(a.x - b.x) < 1 ? 1/(a.dY / a.dX) > 1/(b.dY / b.dX) : a.x > b.x);
+        //}
+        //public static bool operator ==(Edge a, Edge b)//Overload equal to
+        //{
+        //    return (Math.Abs(a.x - b.x) < 1 && 1/(a.dY / a.dX) == 1/(b.dY / b.dX) && a.yMax == b.yMax);
+        //}
+        //public static bool operator !=(Edge a, Edge b)//Overload not equal to
+        //{
+        //    return (Math.Abs(a.x - b.x) > 1 || 1/(a.dY / a.dX) != 1/(b.dY / b.dX) || a.yMax != b.yMax);
+        //}
+
+        //public override int GetHashCode()
+        //{
+        //    return x;
+        //}
 
     }
     //public class Edge
